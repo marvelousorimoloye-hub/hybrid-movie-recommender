@@ -94,7 +94,7 @@ def hybrid_recommend_vectorized(
             anchor_movie_id = movies[movies['title'] == title]['movieId'].iloc[0]
             
             sim_values = cosine_sim[idx, candidate_indices]
-            if issparse(sim_values):
+            if sparse.issparse(sim_values):
                 sim_values = sim_values.toarray().flatten()
             else:
                 sim_values = sim_values.flatten()
@@ -141,7 +141,7 @@ def hybrid_recommend_vectorized(
     # Anchor on one movie
         anchor_idx = indices[title]
         content_sims = cosine_sim[anchor_idx, candidate_indices]
-        content_sims = content_sims.toarray().ravel() if issparse(content_sims) else np.ravel(content_sims)
+        content_sims = content_sims.toarray().ravel() if sparse.issparse(content_sims) else np.ravel(content_sims)
        
     else:
     # Average similarity to user's liked movies
