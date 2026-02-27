@@ -45,32 +45,27 @@ indices = pd.Series(movies.index, index=movies['title']).drop_duplicates()
 
 
 
+
+   import numpy as np
+import pandas as pd
+from scipy.sparse import issparse
+
 def hybrid_recommend_vectorized(
     user_id=None,
-    title=None,                 # optional anchor movie title
+    title=None,                 
     n=10,
     alpha=0.45,
-    min_ratings_threshold=15,   # below this → cold user
-    max_candidates=5000,   # limit candidates to speed up
+    min_ratings_threshold=15,  
+    max_candidates=5000,        
     fallback_to_popularity=True
 ):
     """
-    Fast vectorized hybrid recommender with cold-start handling.
-    
-    Cold-start logic:
-    - If user has < min_ratings_threshold ratings → cold user
-      - If title provided → pure content-based similarity
-      - Else → popularity-based fallback
-    - Otherwise → hybrid (content + collaborative)
-    
-    Uses vectorized operations on candidate subset → much faster.
+    Fast vectorized hybrid recommender with cold-start handling and anchor movie exclusion.
     """
     # ─── Pre-filter candidates ───
-    # Only consider reasonably popular movies to keep computation fast
     popular = movies.sort_values('rating_count', ascending=False).head(max_candidates)
     all_candidates = popular['movieId'].values
-    
-        
+
     if user_id is not None:
         user_rated = ratings[ratings['userId'] == user_id]['movieId'].values
         user_rating_count = len(user_rated)
@@ -87,39 +82,38 @@ def hybrid_recommend_vectorized(
         print(f"User {user_id} is cold ({user_rating_count} ratings) → fallback mode")
 
         if title is not None and title in indices:
-            # Pure content-based from anchor movie
             print(f"Using content-based similarity to '{title}'")
             idx = indices[title]
-            candidate_indices = movies[movies['movieId'].isin(candidates)].index.values
+
+            # Get anchor movieId to exclude it
             anchor_movie_id = movies[movies['title'] == title]['movieId'].iloc[0]
-            
+
+            candidate_indices = movies[movies['movieId'].isin(candidates)].index.values
+
             sim_values = cosine_sim[idx, candidate_indices]
-            if sparse.issparse(sim_values):
+            if issparse(sim_values):
                 sim_values = sim_values.toarray().flatten()
             else:
                 sim_values = sim_values.flatten()
-           
+
             temp_df = pd.DataFrame({
-            'index': candidate_indices,
-            'sim': sim_values,
-            'movieId': movies.iloc[candidate_indices]['movieId'].values
+                'index': candidate_indices,
+                'sim': sim_values,
+                'movieId': movies.iloc[candidate_indices]['movieId'].values
             })
-    
+
             # Exclude the anchor movie
             temp_df = temp_df[temp_df['movieId'] != anchor_movie_id]
-    
+
             # Sort and take top N
             top = temp_df.sort_values('sim', ascending=False).head(n)
-    
+
             recs = movies.iloc[top['index']][['title', 'genres']].copy()
-                
             recs['hybrid_score'] = top['sim'].values * 5  # 0–5 scale
-    
+
             return recs.reset_index(drop=True)
-    
-           
+
         elif fallback_to_popularity:
-            # Most popular movies
             print("No anchor → returning most popular movies")
             popular_recs = popular[['title', 'genres']].head(n).copy()
             popular_recs['hybrid_score'] = np.nan
@@ -128,56 +122,56 @@ def hybrid_recommend_vectorized(
         else:
             return pd.DataFrame()  # empty
 
-    # ─── Normal hybrid path (warm user) ───
+     # Normal hybrid path (warm user) 
     candidate_indices = movies[movies['movieId'].isin(candidates)].index.values
 
-    # 1. Collaborative scores (vectorized predict is not native, so still loop but only on 2000)
+    # 1. Collaborative scores (loop but limited by max_candidates)
     collab_scores = np.array([
         loaded_algo.predict(user_id, mid).est for mid in candidates
     ])
-    
+
     # 2. Content similarity scores (vectorized)
     if title is not None:
-    # Anchor on one movie
+        # Anchor on one movie
         anchor_idx = indices[title]
+        anchor_movie_id = movies[movies['title'] == title]['movieId'].iloc[0]
+
         content_sims = cosine_sim[anchor_idx, candidate_indices]
-        content_sims = content_sims.toarray().ravel() if sparse.issparse(content_sims) else np.ravel(content_sims)
-       
+        content_sims = content_sims.toarray().ravel() if issparse(content_sims) else np.ravel(content_sims)
+
+        # Exclude anchor movie from similarity scores
+        anchor_pos = np.where(candidates == anchor_movie_id)[0]
+        if len(anchor_pos) > 0:
+            content_sims[anchor_pos[0]] = -1  # make sure it's excluded from top N
+
     else:
-    # Average similarity to user's liked movies
+        # Average similarity to user's liked movies
         user_liked = ratings[(ratings['userId'] == user_id) & (ratings['rating'] >= 4.0)]['movieId']
         if len(user_liked) == 0:
             content_sims = np.zeros(len(candidates))
         else:
             liked_indices = movies[movies['movieId'].isin(user_liked)].index.values
             sim_matrix = cosine_sim[liked_indices[:, None], candidate_indices]
-             # Force mean to 1D
             content_sims = sim_matrix.mean(axis=0)
             content_sims = content_sims.toarray().ravel() if issparse(content_sims) else np.ravel(content_sims)
 
     # Normalize to 0–5 scale
     content_scores = content_sims * 5.0
 
-    # Collaborative scores (still loop, but limited to max_candidates)
-    collab_scores = np.array([
-    loaded_algo.predict(user_id, mid).est for mid in candidates
-    ])
-
     # Hybrid score
     hybrid_scores = alpha * content_scores + (1 - alpha) * collab_scores
 
     # Create DataFrame
     results = pd.DataFrame({
-    'movieId': candidates,
-    'hybrid_score': hybrid_scores
+        'movieId': candidates,
+        'hybrid_score': hybrid_scores
     })
-   
-    # 2. Content similarity scores (vectorized)
-   
+
     results = results.merge(movies[['movieId', 'title', 'genres']], on='movieId')
     results = results.sort_values('hybrid_score', ascending=False).head(n)
 
     return results[['title', 'genres', 'hybrid_score']]
+   
 
 # ─── Streamlit App ───
 st.title("Movie Recommender System")
