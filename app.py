@@ -27,7 +27,7 @@ def load_models():
     algo.fit(trainset)
     return algo
 
-    @st.cache_resource
+@st.cache_resource
 def get_cosine_similarity():
     tfidf_matrix_genre_boosted = scipy.sparse.load_npz('data/ml-latest-small/processed/tfidf_matrix_genre_boosted.npz')
     st.info("Computing cosine similarity matrix (happens once)...")
