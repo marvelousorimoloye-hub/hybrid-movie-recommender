@@ -84,7 +84,7 @@ def hybrid_recommend_vectorized(
             candidate_indices = movies[movies['movieId'].isin(candidates)].index.values
 
             sim_values = cosine_sim[idx, candidate_indices]
-            if issparse(sim_values):
+            if sparse.issparse(sim_values):
                 sim_values = sim_values.toarray().flatten()
             else:
                 sim_values = sim_values.flatten()
