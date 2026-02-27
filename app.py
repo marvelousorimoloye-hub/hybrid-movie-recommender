@@ -130,7 +130,7 @@ def hybrid_recommend_vectorized(
         anchor_movie_id = movies[movies['title'] == title]['movieId'].iloc[0]
 
         content_sims = cosine_sim[anchor_idx, candidate_indices]
-        content_sims = content_sims.toarray().ravel() if issparse(content_sims) else np.ravel(content_sims)
+        content_sims = content_sims.toarray().ravel() if sparse.issparse(content_sims) else np.ravel(content_sims)
 
         # Exclude anchor movie from similarity scores
         anchor_pos = np.where(candidates == anchor_movie_id)[0]
@@ -146,7 +146,7 @@ def hybrid_recommend_vectorized(
             liked_indices = movies[movies['movieId'].isin(user_liked)].index.values
             sim_matrix = cosine_sim[liked_indices[:, None], candidate_indices]
             content_sims = sim_matrix.mean(axis=0)
-            content_sims = content_sims.toarray().ravel() if issparse(content_sims) else np.ravel(content_sims)
+            content_sims = content_sims.toarray().ravel() if sparse.issparse(content_sims) else np.ravel(content_sims)
 
     # Normalize to 0–5 scale
     content_scores = content_sims * 5.0
