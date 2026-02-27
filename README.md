@@ -53,4 +53,27 @@ Pure content-based when using high user ID + anchor movie
 
    ```bash
    git clone https://github.com/marvelousorimoloye-hub/hybrid-movie-recommender.git
-   cd hybrid-movie-recommender
+   cd hybrid-movie-recommender 
+
+
+2. Activate environment (or create one)
+   ```bash
+   conda activate recommender
+   # or
+   python -m venv venv
+   venv\Scripts\activate
+
+4. Install dependencies
+   ```bash
+   pip install -r requirements.txt 
+
+5. Run the app
+   ```bash
+   streamlit run app.py 
+   
+  Open http://localhost:8501 in your browser.
+
+  Note: The app uses MovieLens ml-latest-small (included in data/ml-latest-small/) and pre-computed models/TFIDF (re-generated on first run if missing). ```
+
+## License
+MIT
