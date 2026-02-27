@@ -188,7 +188,7 @@ with col1:
         max_value=999999,
         value=414,
         step=1,
-        help=""Real users are 1–610. Use a high number (e.g. 999999) to test cold-start mode."
+        help="Real users are 1–610. Use a high number (e.g. 999999) to test cold-start mode."
     )
 
 with col2:
