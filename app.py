@@ -3,22 +3,41 @@ import pandas as pd
 import numpy as np
 import joblib
 from surprise import SVD
-from scipy.sparse import issparse
+from scipy import sparse
 # ─── Load data & models ───
 @st.cache_data
 def load_data():
+
     movies = pd.read_csv('data/ml-latest-small/processed/movies_fully_enriched_with_content_text.csv')
     ratings = pd.read_csv('data/ml-latest-small/ratings.csv')
+    
     return movies, ratings
 
 @st.cache_resource
 def load_models():
-    loaded_algo = joblib.load('models/svd_model.joblib')
-    cosine_sim = joblib.load('models/cosine_sim.joblib')
-    return loaded_algo, cosine_sim
+    from surprise import Dataset, Reader, SVD
+    from surprise.model_selection import train_test_split
+
+    # Load ratings (already loaded in load_data())
+    reader = Reader(rating_scale=(0.5, 5.0))
+    data = Dataset.load_from_df(ratings[['userId', 'movieId', 'rating']], reader)
+    trainset = data.build_full_trainset()  # use all data for demo
+
+    algo = SVD(n_factors=150, n_epochs=40, lr_all=0.001, reg_all=0.08, random_state=42)
+    algo.fit(trainset)
+    return algo
+
+    @st.cache_resource
+def get_cosine_similarity():
+    tfidf_matrix_genre_boosted = scipy.sparse.load_npz('data/ml-latest-small/processed/tfidf_matrix_genre_boosted.npz')
+    st.info("Computing cosine similarity matrix (happens once)...")
+    from sklearn.metrics.pairwise import cosine_similarity
+    cosine_sim = cosine_similarity(tfidf_matrix_genre_boosted)  
+    return cosine_sim
 
 movies, ratings = load_data()
-loaded_algo, cosine_sim = load_models()
+loaded_algo = load_models()
+cosine_sim = get_cosine_similarity()
 
 # Title → index mapping
 indices = pd.Series(movies.index, index=movies['title']).drop_duplicates()
