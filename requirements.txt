@@ -1,9 +1,8 @@
---extra-index-url https://pypi.org/simple
 streamlit
-pandas
-numpy
+pandas>=2.0
+numpy==1.26.4              
 scikit-learn
 joblib
 matplotlib
 seaborn
-scikit-surprise --index-url https://conda.anaconda.org/conda-forge
+scikit-surprise
