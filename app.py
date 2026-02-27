@@ -43,13 +43,6 @@ cosine_sim = get_cosine_similarity()
 indices = pd.Series(movies.index, index=movies['title']).drop_duplicates()
 
 
-
-
-
-   import numpy as np
-import pandas as pd
-from scipy.sparse import issparse
-
 def hybrid_recommend_vectorized(
     user_id=None,
     title=None,                 
