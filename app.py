@@ -68,7 +68,7 @@ def hybrid_recommend_vectorized(
         user_rating_count = 0
         candidates = all_candidates
 
-    is_cold_user = user_rating_count < min_ratings_threshold
+    is_cold_user = (user_id is None) or (user_id > 610) or (user_rating_count < min_ratings_threshold)
 
     # ─── Cold-start path ───
     if is_cold_user:
@@ -185,10 +185,10 @@ with col1:
     user_id = st.number_input(
         "User ID (for personalized recommendations)",
         min_value=1,
-        max_value=610,
+        max_value=999999,
         value=414,
         step=1,
-        help="Leave at default or enter any valid user ID from MovieLens"
+        help=""Real users are 1–610. Use a high number (e.g. 999999) to test cold-start mode."
     )
 
 with col2:
